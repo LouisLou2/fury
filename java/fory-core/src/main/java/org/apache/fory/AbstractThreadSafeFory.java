@@ -20,6 +20,10 @@
 package org.apache.fory;
 
 import java.util.function.Function;
+import org.apache.fory.io.ForyInputStream;
+import org.apache.fory.io.ForyReadableChannel;
+import org.apache.fory.memory.MemoryBuffer;
+import org.apache.fory.reflect.TypeRef;
 import org.apache.fory.resolver.TypeChecker;
 import org.apache.fory.resolver.TypeResolver;
 import org.apache.fory.serializer.Serializer;
@@ -140,5 +144,25 @@ public abstract class AbstractThreadSafeFory implements ThreadSafeFory {
           fory.ensureSerializersCompiled();
           return null;
         });
+  }
+
+  @Override
+  public <T> T deserialize(byte[] bytes, TypeRef<T> typeRef) {
+    return execute(fory -> fory.deserialize(bytes, typeRef));
+  }
+
+  @Override
+  public <T> T deserialize(MemoryBuffer buffer, TypeRef<T> typeRef) {
+    return execute(fory -> fory.deserialize(buffer, typeRef));
+  }
+
+  @Override
+  public <T> T deserialize(ForyInputStream inputStream, TypeRef<T> typeRef) {
+    return execute(fory -> fory.deserialize(inputStream, typeRef));
+  }
+
+  @Override
+  public <T> T deserialize(ForyReadableChannel channel, TypeRef<T> typeRef) {
+    return execute(fory -> fory.deserialize(channel, typeRef));
   }
 }

@@ -66,6 +66,7 @@ import org.apache.fory.exception.SerializationException;
 import org.apache.fory.memory.MemoryBuffer;
 import org.apache.fory.memory.MemoryUtils;
 import org.apache.fory.reflect.ReflectionUtils;
+import org.apache.fory.reflect.TypeRef;
 import org.apache.fory.resolver.TypeResolver;
 import org.apache.fory.serializer.ArraySerializersTest;
 import org.apache.fory.serializer.EnumSerializerTest;
@@ -693,6 +694,22 @@ public class ForyTest extends ForyTestBase {
     assertEquals(fory.deserialize(fory.serialize(beanA)), beanA);
     assertEquals(
         fory.deserialize(MemoryBuffer.fromByteArray(fory.serialize(beanA)), BeanA.class), beanA);
+  }
+
+  @Test
+  public void testDeserializeWithTypeRef() {
+    Fory fory =
+        Fory.builder()
+            .requireClassRegistration(false)
+            .withXlang(false)
+            .withCompatible(false)
+            .build();
+    List<Integer> values = Arrays.asList(1, 2, 3);
+    TypeRef<List<Integer>> typeRef = new TypeRef<List<Integer>>() {};
+    List<Integer> deserialized = fory.deserialize(fory.serialize(values), typeRef);
+
+    assertEquals(deserialized, values);
+    assertEquals(deserialized.get(0).getClass(), Integer.class);
   }
 
   @Data

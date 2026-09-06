@@ -51,6 +51,7 @@ import org.apache.fory.logging.Logger;
 import org.apache.fory.logging.LoggerFactory;
 import org.apache.fory.memory.MemoryBuffer;
 import org.apache.fory.memory.MemoryUtils;
+import org.apache.fory.reflect.TypeRef;
 import org.apache.fory.resolver.ClassResolver;
 import org.apache.fory.resolver.SharedRegistry;
 import org.apache.fory.resolver.TypeChecker;
@@ -61,6 +62,7 @@ import org.apache.fory.serializer.BufferCallback;
 import org.apache.fory.serializer.BufferObject;
 import org.apache.fory.serializer.Serializer;
 import org.apache.fory.serializer.SerializerFactory;
+import org.apache.fory.type.GenericType;
 import org.apache.fory.type.Generics;
 import org.apache.fory.util.ExceptionUtils;
 import org.apache.fory.util.Preconditions;
@@ -426,6 +428,10 @@ public final class Fory implements BaseFory {
   @Override
   public <T> T deserialize(MemoryBuffer buffer, Class<T> type) {
     ensureRegistrationFinished();
+    return deserializeRoot(buffer, type, typeResolver.buildGenericType(type));
+  }
+
+  private <T> T deserializeRoot(MemoryBuffer buffer, Class<?> type, GenericType genericType) {
     byte bitmap = buffer.readByte();
     if (bitmap != headerBitmap) {
       checkHeaderBitmapWithoutOutOfBand(bitmap);
@@ -437,7 +443,7 @@ public final class Fory implements BaseFory {
         if (readContext.getDepth() > 0) {
           throwDepthDeserializationException();
         }
-        return deserializeByType(buffer, type);
+        return deserializeByType(buffer, type, genericType);
       } finally {
         jitContext.unlock();
       }
@@ -460,6 +466,31 @@ public final class Fory implements BaseFory {
   @Override
   public <T> T deserialize(ForyReadableChannel channel, Class<T> type) {
     return deserialize(channel.getBuffer(), type);
+  }
+
+  @Override
+  public <T> T deserialize(byte[] bytes, TypeRef<T> typeRef) {
+    return deserialize(MemoryUtils.wrap(bytes), typeRef);
+  }
+
+  @Override
+  public <T> T deserialize(MemoryBuffer buffer, TypeRef<T> typeRef) {
+    ensureRegistrationFinished();
+    return deserializeRoot(buffer, typeRef.getRawType(), typeResolver.buildGenericType(typeRef));
+  }
+
+  @Override
+  public <T> T deserialize(ForyInputStream inputStream, TypeRef<T> typeRef) {
+    try {
+      return deserialize(inputStream.getBuffer(), typeRef);
+    } finally {
+      inputStream.shrinkBuffer();
+    }
+  }
+
+  @Override
+  public <T> T deserialize(ForyReadableChannel channel, TypeRef<T> typeRef) {
+    return deserialize(channel.getBuffer(), typeRef);
   }
 
   @Override
@@ -550,12 +581,10 @@ public final class Fory implements BaseFory {
   }
 
   @SuppressWarnings("unchecked")
-  private <T> T deserializeByType(MemoryBuffer buffer, Class<T> type) {
+  private <T> T deserializeByType(MemoryBuffer buffer, Class<?> type, GenericType genericType) {
     // The outer root operation resets generic state after failure; balance this push here only
     // after a successful read.
-    readContext
-        .getGenerics()
-        .pushGenericType(typeResolver.buildGenericType(type), readContext.getDepth());
+    readContext.getGenerics().pushGenericType(genericType, readContext.getDepth());
     RefReader refReader = readContext.getRefReader();
     int nextReadRefId = refReader.tryPreserveRefId(buffer);
     if (nextReadRefId < NOT_NULL_VALUE_FLAG) {
