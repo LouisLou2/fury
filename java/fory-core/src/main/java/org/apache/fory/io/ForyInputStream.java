@@ -128,6 +128,9 @@ public class ForyInputStream extends InputStream implements ForyStreamReader {
       dstIndex += remaining;
       try {
         int read = stream.read(dst, dstIndex, len);
+        if (read < 0) {
+          throw new IndexOutOfBoundsException("No enough data in the stream " + stream);
+        }
         while (read < len) {
           int newRead = stream.read(dst, dstIndex + read, len - read);
           if (newRead < 0) {

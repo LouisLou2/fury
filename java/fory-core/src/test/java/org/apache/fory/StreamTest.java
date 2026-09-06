@@ -372,6 +372,14 @@ public class StreamTest extends ForyTestBase {
   }
 
   @Test
+  public void testStreamReadToAtEof() {
+    ForyInputStream input = new ForyInputStream(new ByteArrayInputStream(new byte[0]));
+    IndexOutOfBoundsException exception =
+        Assert.expectThrows(IndexOutOfBoundsException.class, () -> input.readTo(new byte[1], 0, 1));
+    assertTrue(exception.getMessage().contains("No enough data in the stream"));
+  }
+
+  @Test
   public void testStreamBufferGrowthIsGeometric() throws IOException {
     // Reading many small values from a stream must not reallocate the internal buffer
     // on every read: exact-fit growth copies the whole buffer per small fill and makes
